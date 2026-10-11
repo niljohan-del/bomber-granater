@@ -76,11 +76,18 @@ export class GameScene extends Phaser.Scene {
   private hudShown = false;
   private hudX = 0;
   private hudY = 0;
-  private readonly hudPanelW = 230;
-  private readonly hudPanelH = 380;
-  private readonly dialOffsetY = -78;
-  private readonly dialRadius = 55;
-  private readonly trackHalfW = 75;
+  private hudPanelW = 230;
+  private hudPanelH = 380;
+  private dialOffsetY = -78;
+  private dialRadius = 55;
+  private trackHalfW = 75;
+  private hudGoldOffsetY = -155;
+  private hudAngleLabelExtra = 16;
+  private hudPowerLabelOffsetY = -26;
+  private hudWeaponOffsetY = 34;
+  private hudStatusOffsetY = 68;
+  private hudShieldOffsetY = 106;
+  private hudFireOffsetY = 148;
   private chudBg!: Phaser.GameObjects.Rectangle;
   private chudGoldLabel!: Phaser.GameObjects.Text;
   private chudAngleLabel!: Phaser.GameObjects.Text;
@@ -438,6 +445,7 @@ export class GameScene extends Phaser.Scene {
     this.fourKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR);
 
     this.createControlHud();
+    this.applyHudSizingForDevice();
 
     if (this.deviceChosen) {
       this.state = 'setup';
@@ -473,6 +481,7 @@ export class GameScene extends Phaser.Scene {
   private chooseDevice(mode: 'desktop' | 'mobile'): void {
     this.deviceMode = mode;
     this.deviceChosen = true;
+    this.applyHudSizingForDevice();
 
     this.devicePrompt.setVisible(false);
     this.desktopBtnBg.setVisible(false).disableInteractive();
@@ -793,6 +802,48 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  /** Shrinks the control HUD's footprint and bumps touch-target sizes for the mobile/touch layout. */
+  private applyHudSizingForDevice(): void {
+    const mobile = this.deviceMode === 'mobile';
+
+    this.hudPanelW = mobile ? 210 : 230;
+    this.hudPanelH = mobile ? 300 : 380;
+    this.dialOffsetY = mobile ? -60 : -78;
+    this.dialRadius = mobile ? 50 : 55;
+    this.trackHalfW = mobile ? 70 : 75;
+
+    this.hudGoldOffsetY = mobile ? -125 : -155;
+    this.hudAngleLabelExtra = mobile ? 14 : 16;
+    this.hudPowerLabelOffsetY = mobile ? -18 : -26;
+    this.hudWeaponOffsetY = mobile ? 26 : 34;
+    this.hudStatusOffsetY = mobile ? 52 : 68;
+    this.hudShieldOffsetY = mobile ? 82 : 106;
+    this.hudFireOffsetY = mobile ? 114 : 148;
+
+    this.chudBg.width = this.hudPanelW;
+    this.chudBg.height = this.hudPanelH;
+    this.chudBg.setFillStyle(0x3c4a2e, mobile ? 0.32 : 0.42);
+
+    this.chudPowerTrackBg.width = this.trackHalfW * 2;
+
+    this.chudFireBg.width = mobile ? 172 : 160;
+    this.chudFireBg.height = mobile ? 48 : 44;
+    this.chudShieldBg.height = mobile ? 40 : 38;
+
+    this.chudDialHandle.setRadius(mobile ? 17 : 14);
+    this.chudPowerHandle.setRadius(mobile ? 17 : 14);
+
+    this.chudGoldLabel.setFontSize(mobile ? 16 : 15);
+    this.chudAngleLabel.setFontSize(mobile ? 17 : 15);
+    this.chudPowerLabel.setFontSize(mobile ? 17 : 15);
+    this.chudWeaponLabel.setFontSize(mobile ? 17 : 15);
+    this.chudWeaponStatus.setFontSize(mobile ? 15 : 14);
+    this.chudShieldText.setFontSize(mobile ? 16 : 15);
+    this.chudFireText.setFontSize(mobile ? 19 : 18);
+    this.chudWeaponPrev.setFontSize(mobile ? 30 : 26);
+    this.chudWeaponNext.setFontSize(mobile ? 30 : 26);
+  }
+
   private drawAngleDial(cx: number, cy: number, angleDeg: number): void {
     const g = this.chudDialGraphics;
     const r = this.dialRadius;
@@ -854,8 +905,20 @@ export class GameScene extends Phaser.Scene {
 
     if (visible) {
       this.chudBg.setInteractive({ draggable: true, useHandCursor: true });
-      this.chudDialHandle.setInteractive({ draggable: true, useHandCursor: true });
-      this.chudPowerHandle.setInteractive({ draggable: true, useHandCursor: true });
+      const hitRadius = this.deviceMode === 'mobile' ? 30 : 14;
+      const hitArea = new Phaser.Geom.Circle(0, 0, hitRadius);
+      this.chudDialHandle.setInteractive({
+        draggable: true,
+        useHandCursor: true,
+        hitArea,
+        hitAreaCallback: Phaser.Geom.Circle.Contains,
+      });
+      this.chudPowerHandle.setInteractive({
+        draggable: true,
+        useHandCursor: true,
+        hitArea,
+        hitAreaCallback: Phaser.Geom.Circle.Contains,
+      });
       this.chudWeaponPrev.setInteractive({ useHandCursor: true });
       this.chudWeaponNext.setInteractive({ useHandCursor: true });
       this.chudWeaponStatus.setInteractive({ useHandCursor: true });
@@ -920,16 +983,16 @@ export class GameScene extends Phaser.Scene {
 
     const x0 = this.hudX - this.trackHalfW;
     const x1 = this.hudX + this.trackHalfW;
-    const goldY = this.hudY - 155;
+    const goldY = this.hudY + this.hudGoldOffsetY;
     const dialCx = this.hudX;
     const dialCy = this.hudY + this.dialOffsetY;
-    const angleLabelY = dialCy + 16;
-    const powerLabelY = this.hudY - 26;
+    const angleLabelY = dialCy + this.hudAngleLabelExtra;
+    const powerLabelY = this.hudY + this.hudPowerLabelOffsetY;
     const powerY = this.hudY;
-    const weaponY = this.hudY + 34;
-    const statusY = this.hudY + 68;
-    const shieldY = this.hudY + 106;
-    const fireY = this.hudY + 148;
+    const weaponY = this.hudY + this.hudWeaponOffsetY;
+    const statusY = this.hudY + this.hudStatusOffsetY;
+    const shieldY = this.hudY + this.hudShieldOffsetY;
+    const fireY = this.hudY + this.hudFireOffsetY;
 
     this.chudGoldLabel.setPosition(this.hudX, goldY).setText(`Güld: ${t.gold}`);
 
