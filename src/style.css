@@ -1,0 +1,70 @@
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a12;
+  overflow: hidden;
+  font-family: ui-monospace, Consolas, monospace;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+}
+
+#app canvas {
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  touch-action: none;
+}
+
+#rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #0a0a12;
+  color: #ffe066;
+  text-align: center;
+  padding: 0 32px;
+}
+
+#rotate-overlay .rotate-icon {
+  font-size: 48px;
+  animation: rotate-hint 1.6s ease-in-out infinite;
+}
+
+#rotate-overlay p {
+  margin: 0;
+  font-size: 18px;
+}
+
+@keyframes rotate-hint {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(90deg);
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  #rotate-overlay {
+    display: flex;
+  }
+}
