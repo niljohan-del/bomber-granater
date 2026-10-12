@@ -13,6 +13,20 @@ const GRAVITY = 260;
 
 const PLAYER_COLORS = [0xe24b4b, 0x4b9ee2, 0x9bd14b, 0xf2914b];
 const MIDGAME_TRACKS = ['midgame-1', 'midgame-2', 'midgame-3', 'midgame-4'];
+
+interface MusicTrack {
+  key: string;
+  file: string;
+  label: string;
+}
+
+const MUSIC_TRACKS: MusicTrack[] = [
+  { key: 'intro-music', file: 'introscreen.mp3', label: 'Introskärm' },
+  { key: 'midgame-1', file: 'midgame1.mp3', label: 'Midgame 1' },
+  { key: 'midgame-2', file: 'midgame2.mp3', label: 'Midgame 2' },
+  { key: 'midgame-3', file: 'midgame3.mp3', label: 'Midgame 3' },
+  { key: 'midgame-4', file: 'midgame4.mp3', label: 'Midgame 4' },
+];
 const SHIELD_COST = 5;
 const SHIELD_DURATION = 2;
 
@@ -72,6 +86,18 @@ export class GameScene extends Phaser.Scene {
   private aiThinkTimer = 0;
   private restartBg!: Phaser.GameObjects.Rectangle;
   private restartBtnText!: Phaser.GameObjects.Text;
+
+  private musicPanelOpen = false;
+  private musicToggleBg!: Phaser.GameObjects.Rectangle;
+  private musicToggleText!: Phaser.GameObjects.Text;
+  private musicRows: {
+    bg: Phaser.GameObjects.Rectangle;
+    label: Phaser.GameObjects.Text;
+    playBtn: Phaser.GameObjects.Text;
+    downloadBtn: Phaser.GameObjects.Text;
+  }[] = [];
+  private previewSound: Phaser.Sound.BaseSound | null = null;
+  private previewingKey: string | null = null;
 
   private hudShown = false;
   private hudX = 0;
@@ -363,6 +389,8 @@ export class GameScene extends Phaser.Scene {
       this.aiButtons.push({ bg, text });
     });
 
+    this.createMusicPanel();
+
     this.setupPanel = this.add
       .rectangle(WORLD_W / 2, WORLD_H / 2, 440, 190, 0x000000, 0.55)
       .setStrokeStyle(2, 0xffe066, 0.5)
@@ -476,6 +504,7 @@ export class GameScene extends Phaser.Scene {
     this.muteText.setText(this.musicMuted ? '🔇' : '🔊');
     if (this.introMusic) (this.introMusic as Phaser.Sound.WebAudioSound).volume = this.musicMuted ? 0 : this.introVolume;
     if (this.midgameTrack) (this.midgameTrack as Phaser.Sound.WebAudioSound).volume = this.musicMuted ? 0 : this.midgameVolume;
+    if (this.previewSound) (this.previewSound as Phaser.Sound.WebAudioSound).volume = this.musicMuted ? 0 : this.midgameVolume;
   }
 
   private chooseDevice(mode: 'desktop' | 'mobile'): void {
@@ -493,7 +522,180 @@ export class GameScene extends Phaser.Scene {
     this.state = 'setup';
   }
 
+  private createMusicPanel(): void {
+    const toggleX = 140;
+    const toggleY = 40;
+
+    this.musicToggleBg = this.add
+      .rectangle(toggleX, toggleY, 220, 40, 0x3a3a44, 0.9)
+      .setStrokeStyle(2, 0xffe066, 0.9)
+      .setDepth(100)
+      .setVisible(false);
+    this.musicToggleText = this.add
+      .text(toggleX, toggleY, '', {
+        fontFamily: 'ui-monospace, Consolas, monospace',
+        fontSize: '18px',
+        color: '#ffe066',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(101)
+      .setVisible(false);
+    this.musicToggleBg.on('pointerover', () => this.musicToggleBg.setFillStyle(0x4a4a56, 0.9));
+    this.musicToggleBg.on('pointerout', () => this.musicToggleBg.setFillStyle(0x3a3a44, 0.9));
+    this.musicToggleBg.on('pointerdown', () => this.toggleMusicPanelOpen());
+
+    this.musicRows = MUSIC_TRACKS.map((track, i) => {
+      const rowY = toggleY + 45 + i * 34;
+      const bg = this.add
+        .rectangle(toggleX, rowY, 220, 30, 0x2a2a33, 0.8)
+        .setStrokeStyle(1, 0x9bd14b, 0.4)
+        .setDepth(100)
+        .setVisible(false);
+      const label = this.add
+        .text(toggleX - 100, rowY, track.label, {
+          fontFamily: 'ui-monospace, Consolas, monospace',
+          fontSize: '14px',
+          color: '#cfe8ff',
+        })
+        .setOrigin(0, 0.5)
+        .setDepth(101)
+        .setVisible(false);
+      const playBtn = this.add
+        .text(toggleX + 62, rowY, '▶', {
+          fontFamily: 'ui-monospace, Consolas, monospace',
+          fontSize: '18px',
+          color: '#9bd14b',
+        })
+        .setOrigin(0.5)
+        .setPadding(8)
+        .setDepth(101)
+        .setVisible(false);
+      const downloadBtn = this.add
+        .text(toggleX + 92, rowY, '⬇', {
+          fontFamily: 'ui-monospace, Consolas, monospace',
+          fontSize: '18px',
+          color: '#6fc2ff',
+        })
+        .setOrigin(0.5)
+        .setPadding(8)
+        .setDepth(101)
+        .setVisible(false);
+
+      playBtn.on('pointerover', () => playBtn.setColor('#c8f29e'));
+      playBtn.on('pointerout', () =>
+        playBtn.setColor(this.previewingKey === track.key ? '#ffe066' : '#9bd14b')
+      );
+      playBtn.on('pointerdown', () => this.toggleMusicPreview(track));
+
+      downloadBtn.on('pointerover', () => downloadBtn.setColor('#a9dcff'));
+      downloadBtn.on('pointerout', () => downloadBtn.setColor('#6fc2ff'));
+      downloadBtn.on('pointerdown', () => this.downloadTrack(track));
+
+      return { bg, label, playBtn, downloadBtn };
+    });
+
+    this.refreshMusicRows();
+  }
+
+  private setMusicPanelToggleVisible(visible: boolean): void {
+    this.musicToggleBg.setVisible(visible);
+    this.musicToggleText.setVisible(visible);
+    if (visible) {
+      this.musicToggleBg.setInteractive({ useHandCursor: true });
+    } else {
+      this.musicToggleBg.disableInteractive();
+      this.musicPanelOpen = false;
+      this.stopMusicPreview(false);
+    }
+    this.refreshMusicRows();
+  }
+
+  private toggleMusicPanelOpen(): void {
+    this.musicPanelOpen = !this.musicPanelOpen;
+    this.refreshMusicRows();
+  }
+
+  private refreshMusicRows(): void {
+    this.musicToggleText.setText(this.musicPanelOpen ? '🎵 Musik ▴' : '🎵 Musik ▾');
+    const rowsVisible = this.musicToggleBg.visible && this.musicPanelOpen;
+    for (let i = 0; i < this.musicRows.length; i++) {
+      const row = this.musicRows[i];
+      const track = MUSIC_TRACKS[i];
+      row.bg.setVisible(rowsVisible);
+      row.label.setVisible(rowsVisible);
+      row.playBtn.setVisible(rowsVisible);
+      row.downloadBtn.setVisible(rowsVisible);
+      if (rowsVisible) {
+        row.playBtn.setInteractive({ useHandCursor: true });
+        row.downloadBtn.setInteractive({ useHandCursor: true });
+        const isPlaying = this.previewingKey === track.key;
+        row.playBtn.setText(isPlaying ? '⏸' : '▶');
+        row.playBtn.setColor(isPlaying ? '#ffe066' : '#9bd14b');
+      } else {
+        row.playBtn.disableInteractive();
+        row.downloadBtn.disableInteractive();
+      }
+    }
+  }
+
+  private toggleMusicPreview(track: MusicTrack): void {
+    if (track.key === 'intro-music') {
+      if (this.introMusic?.isPlaying) {
+        this.introMusic.pause();
+        this.previewingKey = null;
+      } else {
+        if (this.introMusic?.isPaused) this.introMusic.resume();
+        else this.introMusic?.play();
+        this.previewingKey = track.key;
+      }
+      this.refreshMusicRows();
+      return;
+    }
+
+    if (this.previewingKey === track.key) {
+      this.stopMusicPreview(true);
+      return;
+    }
+
+    this.stopMusicPreview(false);
+    if (this.introMusic?.isPlaying) this.introMusic.pause();
+    this.previewSound = this.sound.add(track.key, {
+      volume: this.musicMuted ? 0 : this.midgameVolume,
+    });
+    this.previewingKey = track.key;
+    this.previewSound.once('complete', () => this.stopMusicPreview(true));
+    this.previewSound.play();
+    this.refreshMusicRows();
+  }
+
+  /** Stops any playing preview track. When `resumeIntro` is set, resumes the ambient intro loop afterwards. */
+  private stopMusicPreview(resumeIntro: boolean): void {
+    if (this.previewSound) {
+      this.previewSound.stop();
+      this.previewSound.destroy();
+      this.previewSound = null;
+    }
+    const wasIntro = this.previewingKey === 'intro-music';
+    this.previewingKey = null;
+    if (resumeIntro && !wasIntro && this.introMusic && !this.musicMuted) {
+      if (this.introMusic.isPaused) this.introMusic.resume();
+      else if (!this.introMusic.isPlaying) this.introMusic.play();
+    }
+    this.refreshMusicRows();
+  }
+
+  private downloadTrack(track: MusicTrack): void {
+    const a = document.createElement('a');
+    a.href = `audio/${track.file}`;
+    a.download = track.file;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   private showSetupScreen(visible: boolean): void {
+    this.setMusicPanelToggleVisible(this.deviceMode === 'desktop');
     this.setupText.setVisible(visible);
     this.setupPanel.setVisible(visible);
     this.diffLabel.setVisible(visible);
@@ -1057,6 +1259,7 @@ export class GameScene extends Phaser.Scene {
   private startMatch(count: number): void {
     this.terrain = new Terrain(this, WORLD_W, WORLD_H, this.theme, this.difficulty);
 
+    this.setMusicPanelToggleVisible(false);
     this.setupText.setVisible(false);
     this.titleText.setVisible(false);
     this.titleBg.setVisible(false);
@@ -1086,6 +1289,7 @@ export class GameScene extends Phaser.Scene {
   private startMatchVsAI(level: AILevel): void {
     this.terrain = new Terrain(this, WORLD_W, WORLD_H, this.theme, this.difficulty);
 
+    this.setMusicPanelToggleVisible(false);
     this.setupText.setVisible(false);
     this.titleText.setVisible(false);
     this.titleBg.setVisible(false);
