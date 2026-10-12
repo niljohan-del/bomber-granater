@@ -1035,8 +1035,8 @@ export class GameScene extends Phaser.Scene {
     this.chudFireBg.height = mobile ? 48 : 44;
     this.chudShieldBg.height = mobile ? 40 : 38;
 
-    this.chudDialHandle.setRadius(mobile ? 17 : 14);
-    this.chudPowerHandle.setRadius(mobile ? 17 : 14);
+    this.chudDialHandle.setRadius(mobile ? 17 : 16);
+    this.chudPowerHandle.setRadius(mobile ? 17 : 16);
 
     this.chudGoldLabel.setFontSize(mobile ? 16 : 15);
     this.chudAngleLabel.setFontSize(mobile ? 17 : 15);
@@ -1110,8 +1110,12 @@ export class GameScene extends Phaser.Scene {
 
     if (visible) {
       this.chudBg.setInteractive({ draggable: true, useHandCursor: true });
-      const hitRadius = this.deviceMode === 'mobile' ? 30 : 14;
-      const hitArea = new Phaser.Geom.Circle(0, 0, hitRadius);
+      const mobile = this.deviceMode === 'mobile';
+      const hitRadius = mobile ? 30 : 22;
+      const visualRadius = mobile ? 17 : 16;
+      // The hit area is in the handle's local bounds (0,0 to 2*radius), so it must be
+      // centered at (radius, radius) — not (0,0) — to line up with the drawn circle.
+      const hitArea = new Phaser.Geom.Circle(visualRadius, visualRadius, hitRadius);
       this.chudDialHandle.setInteractive({
         draggable: true,
         useHandCursor: true,
