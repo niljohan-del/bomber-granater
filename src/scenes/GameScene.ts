@@ -21,11 +21,11 @@ interface MusicTrack {
 }
 
 const MUSIC_TRACKS: MusicTrack[] = [
-  { key: 'intro-music', file: 'introscreen.mp3', label: 'Introskärm' },
-  { key: 'midgame-1', file: 'midgame1.mp3', label: 'Midgame 1' },
-  { key: 'midgame-2', file: 'midgame2.mp3', label: 'Midgame 2' },
-  { key: 'midgame-3', file: 'midgame3.mp3', label: 'Midgame 3' },
-  { key: 'midgame-4', file: 'midgame4.mp3', label: 'Midgame 4' },
+  { key: 'intro-music', file: 'introscreen.mp3', label: 'Granater' },
+  { key: 'midgame-1', file: 'midgame1.mp3', label: 'Bomber och Granater' },
+  { key: 'midgame-2', file: 'midgame2.mp3', label: 'Bomber och granater (Granat remix)' },
+  { key: 'midgame-3', file: 'midgame3.mp3', label: 'Bomber Granater (Lo-Fi Reverb Mix)' },
+  { key: 'midgame-4', file: 'midgame4.mp3', label: 'Ingen Godhet Kvar (Extreme Drop Extended Remix)' },
 ];
 const SHIELD_COST = 5;
 const SHIELD_DURATION = 2;
@@ -523,11 +523,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createMusicPanel(): void {
-    const toggleX = 140;
+    const toggleX = 190;
     const toggleY = 40;
+    const rowW = 330;
+    const rowH = 42;
 
     this.musicToggleBg = this.add
-      .rectangle(toggleX, toggleY, 220, 40, 0x3a3a44, 0.9)
+      .rectangle(toggleX, toggleY, 200, 40, 0x3a3a44, 0.9)
       .setStrokeStyle(2, 0xffe066, 0.9)
       .setDepth(100)
       .setVisible(false);
@@ -546,23 +548,24 @@ export class GameScene extends Phaser.Scene {
     this.musicToggleBg.on('pointerdown', () => this.toggleMusicPanelOpen());
 
     this.musicRows = MUSIC_TRACKS.map((track, i) => {
-      const rowY = toggleY + 45 + i * 34;
+      const rowY = toggleY + 28 + 8 + rowH / 2 + i * (rowH + 6);
       const bg = this.add
-        .rectangle(toggleX, rowY, 220, 30, 0x2a2a33, 0.8)
+        .rectangle(toggleX, rowY, rowW, rowH, 0x2a2a33, 0.8)
         .setStrokeStyle(1, 0x9bd14b, 0.4)
         .setDepth(100)
         .setVisible(false);
       const label = this.add
-        .text(toggleX - 100, rowY, track.label, {
+        .text(toggleX - rowW / 2 + 10, rowY, track.label, {
           fontFamily: 'ui-monospace, Consolas, monospace',
-          fontSize: '14px',
+          fontSize: '12px',
           color: '#cfe8ff',
+          wordWrap: { width: 230, useAdvancedWrap: true },
         })
         .setOrigin(0, 0.5)
         .setDepth(101)
         .setVisible(false);
       const playBtn = this.add
-        .text(toggleX + 62, rowY, '▶', {
+        .text(toggleX + 125, rowY, '▶', {
           fontFamily: 'ui-monospace, Consolas, monospace',
           fontSize: '18px',
           color: '#9bd14b',
@@ -572,7 +575,7 @@ export class GameScene extends Phaser.Scene {
         .setDepth(101)
         .setVisible(false);
       const downloadBtn = this.add
-        .text(toggleX + 92, rowY, '⬇', {
+        .text(toggleX + 155, rowY, '⬇', {
           fontFamily: 'ui-monospace, Consolas, monospace',
           fontSize: '18px',
           color: '#6fc2ff',
